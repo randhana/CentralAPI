@@ -54,10 +54,10 @@ class EmployeeController {
                     break;
                 case 'uploadFile':
                     $this->uploadFile();
-                    return; // Return to avoid sending additional response
+                    return; 
                 default:
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
-                    return; // Return to avoid sending additional response
+                    return; 
             }
         } catch (Exception $e) {
             ResponseHelper::sendResponse(500, ['error' => $e->getMessage()]);
@@ -109,7 +109,7 @@ class EmployeeController {
 
         $uploadPath = $uploadDir . $file['name'];
         if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-            ResponseHelper::sendResponse(200, ['message' => 'File uploaded successfully', 'file_path' => $uploadPath]);
+            ResponseHelper::sendResponse(200, ['message' => 'File uploaded successfully']);
         } else {
             ResponseHelper::sendResponse(500, ['error' => 'Failed to upload file']);
         }
