@@ -6,11 +6,9 @@ require_once('./helpers/RateLimiter.php');
 require_once('./models/Employee.php');
 
 class EmployeeController {
-    private $masterDb;
     private $employeeModel;
 
     public function __construct($masterDb) {
-        $this->masterDb = $masterDb;
         $this->employeeModel = new Employee($masterDb);
     }
 
@@ -38,6 +36,7 @@ class EmployeeController {
                 
                 default:
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
+                    return; // Return to avoid sending additional response
             }
             ResponseHelper::sendResponse(200, $result);
         } catch (Exception $e) {
@@ -55,16 +54,32 @@ class EmployeeController {
                     break;
                 case 'uploadFile':
                     $this->uploadFile();
-                    return; 
+                    return; // Return to avoid sending additional response
                 default:
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
-                    return; 
+                    return; // Return to avoid sending additional response
             }
         } catch (Exception $e) {
             ResponseHelper::sendResponse(500, ['error' => $e->getMessage()]);
         }
     }
 
+    private function createEmployee($postData) {
+        if (!isset($postData['fullName']) || !isset($postData['nic'])) {
+            ResponseHelper::sendResponse(400, ['error' => 'Full name and NIC are required']);
+            return;
+        }
+
+        $fullName = $postData['fullName'];
+        $nic = $postData['nic'];
+
+        try {
+            $result = $this->employeeModel->create($fullName, $nic);
+            ResponseHelper::sendResponse(201, ['message' => 'Employee created successfully', 'employee_id' => $result]);
+        } catch (PDOException $e) {
+            ResponseHelper::sendResponse(500, ['error' => 'Database error: ' . $e->getMessage()]);
+        }
+    }
 
     private function uploadFile() {
         if (!isset($_FILES['file'])) {
@@ -97,22 +112,6 @@ class EmployeeController {
             ResponseHelper::sendResponse(200, ['message' => 'File uploaded successfully', 'file_path' => $uploadPath]);
         } else {
             ResponseHelper::sendResponse(500, ['error' => 'Failed to upload file']);
-        }
-    }
-
-    private function createEmployee($postData) {
-        if (!isset($postData['fullName']) || !isset($postData['nic'])) {
-            ResponseHelper::sendResponse(400, ['error' => 'Full name and NIC are required']);
-        }
-
-        $fullName = $postData['fullName'];
-        $nic = $postData['nic'];
-
-        try {
-            $result = $this->employeeModel->create($fullName, $nic);
-            ResponseHelper::sendResponse(201, ['message' => 'Employee created successfully', 'employee_id' => $result]);
-        } catch (PDOException $e) {
-            ResponseHelper::sendResponse(500, ['error' => 'Database error: ' . $e->getMessage()]);
         }
     }
 }
