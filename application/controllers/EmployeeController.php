@@ -14,7 +14,7 @@ class EmployeeController {
         $this->employeeModel = new Employee($masterDb);
     }
 
-    public function handleRequest($endpoint) {
+    public function handleGETRequest($endpoint) {
         $postData = json_decode(file_get_contents('php://input'), true);
         $id = $postData['id'] ?? '';
 
@@ -45,9 +45,23 @@ class EmployeeController {
         }
     }
 
-    public function createEmployee() {
+    public function handlePOSTRequest($endpoint) {
         $postData = json_decode(file_get_contents('php://input'), true);
 
+        try {
+            switch ($endpoint) {
+                case 'createEmployee':
+                    $this->createEmployee($postData);
+                    break;
+                default:
+                    ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
+            }
+        } catch (Exception $e) {
+            ResponseHelper::sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function createEmployee($postData) {
         if (!isset($postData['fullName']) || !isset($postData['nic'])) {
             ResponseHelper::sendResponse(400, ['error' => 'Full name and NIC are required']);
         }
@@ -63,3 +77,4 @@ class EmployeeController {
         }
     }
 }
+?>
