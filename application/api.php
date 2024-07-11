@@ -29,47 +29,44 @@ $ipAddress = $_SERVER['REMOTE_ADDR'];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'POST':
         if ($endpoint === 'getAccessToken') {
-            RateLimiter::rateLimit($ipAddress, 8); // Limit to 8 requests per minute
+            RateLimiter::rateLimit($ipAddress, 8); 
             $authController = new AuthController($apiDb);
             $authController->getAccessToken();
-        } elseif ($endpoint === 'createEmployee') {
+        } else {
             $token = TokenHelper::getBearerToken();
             if (!$token) {
+                RateLimiter::rateLimit($ipAddress, 8); 
                 ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided']);
             }
 
             $user = TokenHelper::verifyToken($apiDb, $token);
             if (!$user) {
+                RateLimiter::rateLimit($ipAddress, 8); 
                 ResponseHelper::sendResponse(401, ['error' => 'Invalid token']);
             }
 
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                ResponseHelper::sendResponse(405, ['error' => 'Method Not Allowed']);
-            }
-
-            RateLimiter::rateLimit($ipAddress, 8); // Limit to 8 requests per minute
+            RateLimiter::rateLimit($ipAddress, 20); 
             $employeeController = new EmployeeController($masterDb);
-            $employeeController->createEmployee();
-        } else {
-            ResponseHelper::sendResponse(405, ['error' => 'Method Not Allowed']);
+            $employeeController->handlePOSTRequest($endpoint);
         }
         break;
 
     case 'GET':
         $token = TokenHelper::getBearerToken();
         if (!$token) {
+            RateLimiter::rateLimit($ipAddress, 8); 
             ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided']);
         }
 
         $user = TokenHelper::verifyToken($apiDb, $token);
         if (!$user) {
+            RateLimiter::rateLimit($ipAddress, 8); 
             ResponseHelper::sendResponse(401, ['error' => 'Invalid token']);
         }
 
-        RateLimiter::rateLimit($ipAddress, 8); // Limit to 8 requests per minute
-
+        RateLimiter::rateLimit($ipAddress, 20); 
         $employeeController = new EmployeeController($masterDb);
-        $employeeController->handleRequest($endpoint);
+        $employeeController->handleGETRequest($endpoint);
         break;
 
     default:
