@@ -6,11 +6,9 @@ require_once('./helpers/RateLimiter.php');
 require_once('./models/Employee.php');
 
 class EmployeeController {
-    private $masterDb;
     private $employeeModel;
 
     public function __construct($masterDb) {
-        $this->masterDb = $masterDb;
         $this->employeeModel = new Employee($masterDb);
     }
 
@@ -38,6 +36,7 @@ class EmployeeController {
                 
                 default:
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
+                    return; // Return to avoid sending additional response
             }
             ResponseHelper::sendResponse(200, $result);
         } catch (Exception $e) {
@@ -53,8 +52,12 @@ class EmployeeController {
                 case 'createEmployee':
                     $this->createEmployee($postData);
                     break;
+                case 'uploadFile':
+                    $this->uploadFile();
+                    return; 
                 default:
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
+                    return; 
             }
         } catch (Exception $e) {
             ResponseHelper::sendResponse(500, ['error' => $e->getMessage()]);
@@ -64,6 +67,7 @@ class EmployeeController {
     private function createEmployee($postData) {
         if (!isset($postData['fullName']) || !isset($postData['nic'])) {
             ResponseHelper::sendResponse(400, ['error' => 'Full name and NIC are required']);
+            return;
         }
 
         $fullName = $postData['fullName'];
@@ -76,5 +80,47 @@ class EmployeeController {
             ResponseHelper::sendResponse(500, ['error' => 'Database error: ' . $e->getMessage()]);
         }
     }
+
+    private function uploadFile() {
+        if (!isset($_FILES['file'])) {
+            ResponseHelper::sendResponse(400, ['error' => 'File not uploaded']);
+            return;
+        }
+        $file = $_FILES['file'];
+    
+        // Validate file type
+        $allowedTypes = ['application/pdf', 'text/plain'];
+        if (!in_array($file['type'], $allowedTypes)) {
+            ResponseHelper::sendResponse(400, ['error' => 'Only PDF and TXT files are allowed']);
+            return;
+        }
+    
+        // limit file size -max 5MB
+        $maxFileSize = 5 * 1024 * 1024; 
+        if ($file['size'] > $maxFileSize) {
+            ResponseHelper::sendResponse(400, ['error' => 'File size exceeds the limit of 5MB']);
+            return;
+        }
+    
+        // Sanitize file name
+        $fileName = basename($file['name']);
+        $fileName = preg_replace('/[^a-zA-Z0-9-_\.]/', '', $fileName);
+    
+        // "Uploads" directory 
+        $uploadDir = './Uploads/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+    
+        $uploadPath = $uploadDir . $fileName;
+        if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+           
+    
+            ResponseHelper::sendResponse(200, ['message' => 'File uploaded successfully']);
+        } else {
+            ResponseHelper::sendResponse(500, ['error' => 'Failed to upload file']);
+        }
+    }
+    
 }
 ?>
