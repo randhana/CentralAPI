@@ -28,6 +28,7 @@ class AuthController {
 
         if (!isset($postData['username']) || !isset($postData['password'])) {
             ResponseHelper::sendResponse(400, ['error' => 'Username and password are required']);
+            return false;
         }
 
         $username = $postData['username'];
@@ -36,6 +37,7 @@ class AuthController {
         $user = $this->userModel->getUserByUsername($username);
         if (!$user || !password_verify($password, $user['password'])) {
             ResponseHelper::sendResponse(401, ['error' => 'Invalid username or password']);
+            return false;
         }
 
         $issuedAt = time();

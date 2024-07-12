@@ -49,6 +49,9 @@ try {
                 RateLimiter::rateLimit($ipAddress, 8);
                 $authController = new AuthController($apiDb);
                 $authController->getAccessToken();
+                if (!$authController) {
+                    exit;
+                }
             } else {
                 $token = TokenHelper::getBearerToken();
                 if (!$token) {

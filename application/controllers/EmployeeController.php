@@ -38,6 +38,10 @@ class EmployeeController {
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
                     return; // Return to avoid sending additional response
             }
+            if (!$result) {
+                ResponseHelper::sendResponse(404,['error' => 'NIC not found']);
+                return;
+            }
             ResponseHelper::sendResponse(200, $result);
         } catch (Exception $e) {
             ResponseHelper::sendResponse(500, ['error' => $e->getMessage()]);
