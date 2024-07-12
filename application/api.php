@@ -18,7 +18,7 @@ use Monolog\Handler\StreamHandler;
 
 // Log channel
 $log = new Logger('api_logger');
-$log->pushHandler(new StreamHandler(__DIR__.'/logs/api.log', Logger::DEBUG));
+$log->pushHandler(new StreamHandler('../logs/api.log', Logger::DEBUG));
 
 $log->info('Incoming request', [
     'method' => $_SERVER['REQUEST_METHOD'],

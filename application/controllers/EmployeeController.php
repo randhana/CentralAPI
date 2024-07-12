@@ -111,7 +111,7 @@ class EmployeeController {
         $fileName = preg_replace('/[^a-zA-Z0-9-_\.]/', '', $fileName);
     
         // "Uploads" directory 
-        $uploadDir = './Uploads/';
+        $uploadDir = '../Uploads/';
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
