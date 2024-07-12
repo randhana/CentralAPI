@@ -14,9 +14,9 @@ class Employee {
     }
 
     public function getStatus($nic) {
-        $sql = "SELECT status FROM api_employee WHERE em_nic = :em_nic";
+        $sql = "SELECT status FROM api_employee WHERE em_nic = ?";
         $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':em_nic', $nic, PDO::PARAM_STR);
+        $stmt->bindParam(1, $nic);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
