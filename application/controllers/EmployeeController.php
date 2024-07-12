@@ -87,32 +87,40 @@ class EmployeeController {
             return;
         }
         $file = $_FILES['file'];
-
+    
         // Validate file type
         $allowedTypes = ['application/pdf', 'text/plain'];
         if (!in_array($file['type'], $allowedTypes)) {
             ResponseHelper::sendResponse(400, ['error' => 'Only PDF and TXT files are allowed']);
             return;
         }
-
-        // Validate file size (max 5MB)
+    
+        // limit file size -max 5MB
         $maxFileSize = 5 * 1024 * 1024; 
         if ($file['size'] > $maxFileSize) {
             ResponseHelper::sendResponse(400, ['error' => 'File size exceeds the limit of 5MB']);
             return;
         }
-
+    
+        // Sanitize file name
+        $fileName = basename($file['name']);
+        $fileName = preg_replace('/[^a-zA-Z0-9-_\.]/', '', $fileName);
+    
+        // "Uploads" directory 
         $uploadDir = './Uploads/';
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
-
-        $uploadPath = $uploadDir . $file['name'];
+    
+        $uploadPath = $uploadDir . $fileName;
         if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+           
+    
             ResponseHelper::sendResponse(200, ['message' => 'File uploaded successfully']);
         } else {
             ResponseHelper::sendResponse(500, ['error' => 'Failed to upload file']);
         }
     }
+    
 }
 ?>
