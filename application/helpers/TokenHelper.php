@@ -13,6 +13,8 @@ class TokenHelper {
     }
 
     public static function verifyToken($apiDb, $token) {
+        global $log; //global log object
+
         try {
             $sql = "SELECT id, token_expiry FROM login WHERE token = ?";
             $stmt = $apiDb->prepare($sql);
@@ -21,16 +23,22 @@ class TokenHelper {
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$user) {
+                $log->warning('Invalid token', ['token' => $token]);
                 ResponseHelper::sendResponse(401, ['error' => 'Invalid token']);
+                return false; 
             }
 
             if (new DateTime($user['token_expiry']) < new DateTime()) {
+                $log->warning('Token has expired', ['token' => $token]);
                 ResponseHelper::sendResponse(401, ['error' => 'Token has expired']);
+                return false; 
             }
 
             return $user;
         } catch (PDOException $e) {
+            $log->error('Token verification failed', ['error' => $e->getMessage()]);
             ResponseHelper::sendResponse(500, ['error' => 'Token verification failed: ' . $e->getMessage()]);
+            return false; 
         }
     }
 }
