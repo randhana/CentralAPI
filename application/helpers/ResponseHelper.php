@@ -1,11 +1,19 @@
 <?php
 
 class ResponseHelper {
-    public static function sendResponse($statusCode, $data) {
-        http_response_code($statusCode);
+    public static function sendResponse($status, $data) {
+        global $log; 
+        http_response_code($status);
         header('Content-Type: application/json');
-        echo json_encode($data);
-        exit;
+        $response = json_encode($data);
+        echo $response;
+        
+        // Log the response
+        $log->info('Outgoing response', [
+            'status' => $status,
+            'response' => $response
+        ]);
     }
 }
+
 ?>
