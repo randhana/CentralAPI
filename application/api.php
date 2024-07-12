@@ -13,6 +13,20 @@ $redis->connect('127.0.0.1', 6379);
 
 date_default_timezone_set('Asia/Colombo');
 
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+
+//log channel
+$log = new Logger('api_logger');
+$log->pushHandler(new StreamHandler(__DIR__.'/logs/api.log', Logger::DEBUG));
+
+$log->info('Incoming request', [
+    'method' => $_SERVER['REQUEST_METHOD'],
+    'uri' => $_SERVER['REQUEST_URI'],
+    'ip' => $_SERVER['REMOTE_ADDR'],
+    'body' => file_get_contents('php://input') 
+]);
+
 $request_uri = strtok($_SERVER["REQUEST_URI"], '?');
 $parts = explode('.php/', $request_uri);
 
