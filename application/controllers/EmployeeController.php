@@ -38,6 +38,10 @@ class EmployeeController {
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
                     return; // Return to avoid sending additional response
             }
+            if (!$result) {
+                ResponseHelper::sendResponse(404,['error' => 'NIC not found']);
+                return;
+            }
             ResponseHelper::sendResponse(200, $result);
         } catch (Exception $e) {
             ResponseHelper::sendResponse(500, ['error' => $e->getMessage()]);
@@ -107,7 +111,7 @@ class EmployeeController {
         $fileName = preg_replace('/[^a-zA-Z0-9-_\.]/', '', $fileName);
     
         // "Uploads" directory 
-        $uploadDir = './Uploads/';
+        $uploadDir = '../Uploads/';
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
