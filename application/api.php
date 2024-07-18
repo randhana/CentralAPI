@@ -46,7 +46,9 @@ try {
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'POST':
             if ($endpoint === 'getAccessToken') {
-                RateLimiter::rateLimit($ipAddress, 8);
+                if (!RateLimiter::rateLimit($ipAddress, 8)) {
+                    exit;
+                }
                 $authController = new AuthController($apiDb);
                 $authController->getAccessToken();
                 if (!$authController) {
