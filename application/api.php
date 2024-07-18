@@ -61,7 +61,7 @@ try {
                     exit;
                 }
 
-                $user = TokenHelper::verifyToken($apiDb, $token);
+                $user = TokenHelper::verifyToken($token);
                 if (!$user) {
                     exit;
                 }
@@ -81,7 +81,7 @@ try {
                 exit;
             }
 
-            $user = TokenHelper::verifyToken($apiDb, $token);
+            $user = TokenHelper::verifyToken($token);
             if (!$user) {
                 exit;
             }

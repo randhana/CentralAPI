@@ -1,6 +1,12 @@
 <?php
 
+require_once '../vendor/autoload.php';
+use \Firebase\JWT\JWT;
+use \Firebase\JWT\Key;
+
 class TokenHelper {
+    private static $publicKeyPath = './public.pem'; //public key 
+
     public static function getBearerToken() {
         $headers = apache_request_headers();
         if (!isset($headers['Authorization'])) {
@@ -12,33 +18,29 @@ class TokenHelper {
         return null;
     }
 
-    public static function verifyToken($apiDb, $token) {
-        global $log; //global log object
+    public static function verifyToken($token) {
+        global $log; // global log object
 
         try {
-            $sql = "SELECT id, token_expiry FROM login WHERE token = ?";
-            $stmt = $apiDb->prepare($sql);
-            $stmt->bindParam(1, $token);
-            $stmt->execute();
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            $publicKey = file_get_contents(self::$publicKeyPath);
+            $decoded = JWT::decode($token, new Key($publicKey, 'RS256'));
+            $user = (array) $decoded;
 
-            if (!$user) {
-                $log->warning('Invalid token', ['token' => $token]);
-                ResponseHelper::sendResponse(401, ['error' => 'Invalid token']);
-                return false; 
-            }
-
-            if (new DateTime($user['token_expiry']) < new DateTime()) {
+            if (new DateTime() > new DateTime('@' . $user['exp'])) {
                 $log->warning('Token has expired', ['token' => $token]);
                 ResponseHelper::sendResponse(401, ['error' => 'Token has expired']);
-                return false; 
+                return false;
             }
 
             return $user;
-        } catch (PDOException $e) {
-            $log->error('Token verification failed', ['error' => $e->getMessage()]);
-            ResponseHelper::sendResponse(500, ['error' => 'Token verification failed: ' . $e->getMessage()]);
-            return false; 
+        } catch (\Firebase\JWT\ExpiredException $e) {
+            $log->warning('Token has expired', ['token' => $token]);
+            ResponseHelper::sendResponse(401, ['error' => 'Token has expired']);
+            return false;
+        } catch (\Exception $e) {
+            $log->warning('Invalid token', ['token' => $token, 'error' => $e->getMessage()]);
+            ResponseHelper::sendResponse(401, ['error' => 'Invalid token: ' . $e->getMessage()]);
+            return false;
         }
     }
 }
