@@ -31,7 +31,10 @@ $rateLimiter = new RateLimiter($redis, 20, 60);
 date_default_timezone_set('Asia/Colombo');
 
 // Log the incoming request
+$requestId = uniqid();
+
 $requestLogger->info('Incoming request', [
+    'request_id' => $requestId,
     'method' => $_SERVER['REQUEST_METHOD'],
     'uri' => $_SERVER['REQUEST_URI'],
     'ip' => $_SERVER['REMOTE_ADDR'],
@@ -44,7 +47,7 @@ $parts = explode('.php/', $request_uri);
 
 if (count($parts) < 2) {
     $requestLogger->warning('Invalid URL format');
-    ResponseHelper::sendResponse(400, ['error' => 'Invalid URL format']);
+    ResponseHelper::sendResponse(400, ['error' => 'Invalid URL format'], $requestId);
     exit;
 }
 
@@ -69,19 +72,19 @@ try {
                 $token = TokenHelper::getBearerToken();
                 if (!$token) {
                     $requestLogger->warning('Authorization token not provided');
-                    ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided']);
+                    ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided'], $requestId);
                     exit;
                 }
 
                 $user = TokenHelper::verifyToken($token);
                 if (!$user) {
                     $requestLogger->warning('Invalid authorization token');
-                    ResponseHelper::sendResponse(401, ['error' => 'Invalid authorization token']);
+                    ResponseHelper::sendResponse(401, ['error' => 'Invalid authorization token'], $requestId);
                     exit;
                 }
 
                 $employeeController = new EmployeeController($masterDb);
-                $employeeController->handlePOSTRequest($endpoint);
+                $employeeController->handlePOSTRequest($endpoint, $requestId);
             }
             break;
 
@@ -89,27 +92,27 @@ try {
             $token = TokenHelper::getBearerToken();
             if (!$token) {
                 $requestLogger->warning('Authorization token not provided');
-                ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided']);
+                ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided'], $requestId);
                 exit;
             }
 
             $user = TokenHelper::verifyToken($token);
             if (!$user) {
                 $requestLogger->warning('Invalid authorization token');
-                ResponseHelper::sendResponse(401, ['error' => 'Invalid authorization token']);
+                ResponseHelper::sendResponse(401, ['error' => 'Invalid authorization token'], $requestId);
                 exit;
             }
 
             $employeeController = new EmployeeController($masterDb);
-            $employeeController->handleGETRequest($endpoint);
+            $employeeController->handleGETRequest($endpoint, $requestId);
             break;
 
         default:
             $requestLogger->warning('Method Not Allowed');
-            ResponseHelper::sendResponse(405, ['error' => 'Method Not Allowed']);
+            ResponseHelper::sendResponse(405, ['error' => 'Method Not Allowed'], $requestId);
     }
 } catch (Exception $e) {
     $errorLogger->error('An error occurred', ['error' => $e->getMessage()]);
-    ResponseHelper::sendResponse(500, ['error' => 'Internal Server Error']);
+    ResponseHelper::sendResponse(500, ['error' => 'Internal Server Error'], $requestId);
 }
 ?>
