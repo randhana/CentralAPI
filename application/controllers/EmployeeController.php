@@ -4,12 +4,20 @@ require_once('./helpers/ResponseHelper.php');
 require_once('./helpers/TokenHelper.php');
 require_once('./helpers/RateLimiter.php');
 require_once('./models/Employee.php');
+require_once('logger.php');
 
 class EmployeeController {
     private $employeeModel;
+    private $requestLogger;
+    private $errorLogger;
 
     public function __construct($masterDb) {
         $this->employeeModel = new Employee($masterDb);
+
+        //init logger
+        $loggers = initializeLoggers();
+        $this->requestLogger = $loggers['requestLogger'];
+        $this->errorLogger = $loggers['errorLogger'];
     }
 
     public function handleGETRequest($endpoint) {
@@ -33,18 +41,25 @@ class EmployeeController {
                     }
                     $result = $this->employeeModel->getFullName($id);
                     break;
-                
                 default:
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint']);
-                    return; // Return to avoid sending additional response
+                    return; 
             }
+
             if (!$result) {
-                ResponseHelper::sendResponse(404,['error' => 'NIC not found']);
+                ResponseHelper::sendResponse(404, ['error' => 'NIC not found']);
                 return;
             }
+
             ResponseHelper::sendResponse(200, $result);
         } catch (Exception $e) {
-            ResponseHelper::sendResponse(500, ['error' => $e->getMessage()]);
+            $this->errorLogger->error('Error handling GET request', [
+                'endpoint' => $endpoint,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            ResponseHelper::sendResponse(500, ['error' => 'Internal Server Error']);
         }
     }
 
@@ -64,7 +79,13 @@ class EmployeeController {
                     return; 
             }
         } catch (Exception $e) {
-            ResponseHelper::sendResponse(500, ['error' => $e->getMessage()]);
+            $this->errorLogger->error('Error handling POST request', [
+                'endpoint' => $endpoint,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            ResponseHelper::sendResponse(500, ['error' => 'Internal Server Error']);
         }
     }
 
@@ -81,7 +102,12 @@ class EmployeeController {
             $result = $this->employeeModel->create($fullName, $nic);
             ResponseHelper::sendResponse(201, ['message' => 'Employee created successfully', 'employee_id' => $result]);
         } catch (PDOException $e) {
-            ResponseHelper::sendResponse(500, ['error' => 'Database error: ' . $e->getMessage()]);
+            $this->errorLogger->error('Database error in createEmployee', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            ResponseHelper::sendResponse(500, ['error' => 'Database error']);
         }
     }
 
@@ -91,40 +117,42 @@ class EmployeeController {
             return;
         }
         $file = $_FILES['file'];
-    
+
         // Validate file type
         $allowedTypes = ['application/pdf', 'text/plain'];
         if (!in_array($file['type'], $allowedTypes)) {
             ResponseHelper::sendResponse(400, ['error' => 'Only PDF and TXT files are allowed']);
             return;
         }
-    
-        // limit file size -max 5MB
+
+        // Limit file size - max 5MB
         $maxFileSize = 5 * 1024 * 1024; 
         if ($file['size'] > $maxFileSize) {
             ResponseHelper::sendResponse(400, ['error' => 'File size exceeds the limit of 5MB']);
             return;
         }
-    
+
         // Sanitize file name
         $fileName = basename($file['name']);
         $fileName = preg_replace('/[^a-zA-Z0-9-_\.]/', '', $fileName);
-    
+
         // "Uploads" directory 
         $uploadDir = '../Uploads/';
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
-    
+
         $uploadPath = $uploadDir . $fileName;
         if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-           
-    
+            $this->requestLogger->info('File uploaded successfully', ['file' => $fileName]);
             ResponseHelper::sendResponse(200, ['message' => 'File uploaded successfully']);
         } else {
+            $this->errorLogger->error('Failed to upload file', [
+                'file' => $fileName,
+                'error' => 'Failed to move uploaded file'
+            ]);
             ResponseHelper::sendResponse(500, ['error' => 'Failed to upload file']);
         }
     }
-    
 }
 ?>
