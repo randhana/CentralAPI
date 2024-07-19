@@ -7,11 +7,11 @@ class ResponseHelper {
         self::$logger = $logger;
     }
 
-    public static function sendResponse($status, $data) {
-        if (self::$logger === null) {
-            throw new Exception('Logger not set');
+    public static function sendResponse($status, $data, $requestId = null) {
+        if (!self::$logger) {
+            throw new \Exception('Logger is not initialized.');
         }
-        
+
         http_response_code($status);
         header('Content-Type: application/json');
         $response = json_encode($data);
@@ -20,9 +20,9 @@ class ResponseHelper {
         // Log the response
         self::$logger->info('Outgoing response', [
             'status' => $status,
-            'response' => $response
+            'response' => $response,
+            'request_id' => $requestId
         ]);
     }
 }
-
 ?>
