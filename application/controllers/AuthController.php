@@ -15,19 +15,19 @@ class AuthController {
         $this->userModel = new User($apiDb);
     }
 
-    public function getAccessToken() {
+    public function getAccessToken($requestId = null) {
         $privateKeyFile = './private_key.pem';
         $passphrase = 'master';
 
         $privateKey = openssl_pkey_get_private('file://' . $privateKeyFile, $passphrase);
         if (!$privateKey) {
-            ResponseHelper::sendResponse(500, ['error' => 'Failed to load private key']);
+            ResponseHelper::sendResponse(500, ['error' => 'Failed to load private key'], $requestId);
         }
 
         $postData = json_decode(file_get_contents('php://input'), true);
 
         if (!isset($postData['username']) || !isset($postData['password'])) {
-            ResponseHelper::sendResponse(400, ['error' => 'Username and password are required']);
+            ResponseHelper::sendResponse(400, ['error' => 'Username and password are required'], $requestId);
             return false;
         }
 
@@ -36,7 +36,7 @@ class AuthController {
 
         $user = $this->userModel->getUserByUsername($username);
         if (!$user || !password_verify($password, $user['password'])) {
-            ResponseHelper::sendResponse(401, ['error' => 'Invalid username or password']);
+            ResponseHelper::sendResponse(401, ['error' => 'Invalid username or password'], $requestId);
             return false;
         }
 
@@ -60,6 +60,6 @@ class AuthController {
 
         $this->userModel->updateToken($updateUserId, $updateToken, $updateExpiry);
 
-        ResponseHelper::sendResponse(200, ["access_token" => $jwt, "expires_in" => 3600]);
+        ResponseHelper::sendResponse(200, ["access_token" => $jwt, "expires_in" => 3600], $requestId);
     }
 }

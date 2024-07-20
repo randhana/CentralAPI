@@ -66,7 +66,7 @@ try {
         case 'POST':
             if ($endpoint === 'getAccessToken') {
                 $authController = new AuthController($apiDb);
-                $authController->getAccessToken();
+                $authController->getAccessToken($requestId);
             } else {
                 $token = TokenHelper::getBearerToken();
                 if (!$token) {
