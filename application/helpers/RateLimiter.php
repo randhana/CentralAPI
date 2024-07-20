@@ -1,20 +1,36 @@
 <?php
 
 class RateLimiter {
-    public static function rateLimit($ipAddress, $maxRequestsPerMinute) {
-        global $redis;
+    private $redis;
+    private $maxRequestsPerMinute;
+    private $blockTime;
 
+    public function __construct($redis, $maxRequestsPerMinute = 20, $blockTime = 60) {
+        $this->redis = $redis;
+        $this->maxRequestsPerMinute = $maxRequestsPerMinute;
+        $this->blockTime = $blockTime;
+    }
+
+    public function rateLimit($ipAddress) {
         $requestCountKey = 'api_request_' . $ipAddress;
-        $requestCount = (int) $redis->get($requestCountKey);
+        $blockKey = 'block_' . $ipAddress;
 
-        if ($requestCount >= $maxRequestsPerMinute) {
+        if ($this->redis->exists($blockKey)) {
+            ResponseHelper::sendResponse(429, ['error' => 'Rate limit exceeded. Try again later.']);
+            return false;
+        }
+
+        $requestCount = (int) $this->redis->get($requestCountKey);
+
+        if ($requestCount >= $this->maxRequestsPerMinute) {
+            $this->redis->setex($blockKey, $this->blockTime, true);
             ResponseHelper::sendResponse(429, ['error' => 'Rate limit exceeded']);
             return false;
         }
 
-        $redis->incr($requestCountKey);
-        $redis->expire($requestCountKey, 60);
-        
+        $this->redis->incr($requestCountKey);
+        $this->redis->expire($requestCountKey, 60);
+
         return true;
     }
 }

@@ -8,15 +8,17 @@ require_once('helpers/RateLimiter.php');
 require_once('controllers/AuthController.php');
 require_once('controllers/EmployeeController.php');
 
-$redis = new Redis();
-$redis->connect('127.0.0.1', 6379);
-
-date_default_timezone_set('Asia/Colombo');
-
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
-// Log channel
+$redis = new Redis();
+$redis->connect('127.0.0.1', 6379);
+
+$rateLimiter = new RateLimiter($redis, 20, 60);
+
+date_default_timezone_set('Asia/Colombo');
+
+//Log channel
 $log = new Logger('api_logger');
 $log->pushHandler(new StreamHandler('../logs/api.log', Logger::DEBUG));
 
@@ -43,22 +45,20 @@ $id = $endpoint_and_params[1] ?? '';
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 
 try {
+    //Rate limiting check
+    if (!$rateLimiter->rateLimit($ipAddress)) {
+        exit;
+    }
+
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'POST':
             if ($endpoint === 'getAccessToken') {
-                if (!RateLimiter::rateLimit($ipAddress, 8)) {
-                    exit;
-                }
                 $authController = new AuthController($apiDb);
                 $authController->getAccessToken();
-                if (!$authController) {
-                    exit;
-                }
             } else {
                 $token = TokenHelper::getBearerToken();
                 if (!$token) {
                     $log->warning('Authorization token not provided');
-                    RateLimiter::rateLimit($ipAddress, 8);
                     ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided']);
                     exit;
                 }
@@ -68,7 +68,6 @@ try {
                     exit;
                 }
 
-                RateLimiter::rateLimit($ipAddress, 20);
                 $employeeController = new EmployeeController($masterDb);
                 $employeeController->handlePOSTRequest($endpoint);
             }
@@ -78,7 +77,6 @@ try {
             $token = TokenHelper::getBearerToken();
             if (!$token) {
                 $log->warning('Authorization token not provided');
-                RateLimiter::rateLimit($ipAddress, 8);
                 ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided']);
                 exit;
             }
@@ -88,7 +86,6 @@ try {
                 exit;
             }
 
-            RateLimiter::rateLimit($ipAddress, 20);
             $employeeController = new EmployeeController($masterDb);
             $employeeController->handleGETRequest($endpoint);
             break;
