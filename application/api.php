@@ -46,7 +46,6 @@ $request_uri = strtok($_SERVER["REQUEST_URI"], '?');
 $parts = explode('.php/', $request_uri);
 
 if (count($parts) < 2) {
-    $requestLogger->warning('Invalid URL format');
     ResponseHelper::sendResponse(400, ['error' => 'Invalid URL format'], $requestId);
     exit;
 }
@@ -71,14 +70,17 @@ try {
             } else {
                 $token = TokenHelper::getBearerToken();
                 if (!$token) {
-                    $requestLogger->warning('Authorization token not provided');
                     ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided'], $requestId);
                     exit;
                 }
 
-                $user = TokenHelper::verifyToken($token);
-                if (!$user) {
-                    $requestLogger->warning('Invalid authorization token');
+                $tokenResult = TokenHelper::verifyToken($token);
+                if ($tokenResult === 'expired') {
+                    ResponseHelper::sendResponse(401, ['error' => 'Token has expired'], $requestId);
+                    exit;
+                }
+                
+                if ($tokenResult === 'invalid' || !$tokenResult) {
                     ResponseHelper::sendResponse(401, ['error' => 'Invalid authorization token'], $requestId);
                     exit;
                 }
@@ -91,24 +93,26 @@ try {
         case 'GET':
             $token = TokenHelper::getBearerToken();
             if (!$token) {
-                $requestLogger->warning('Authorization token not provided');
                 ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided'], $requestId);
                 exit;
             }
 
-            $user = TokenHelper::verifyToken($token);
-            if (!$user) {
-                $requestLogger->warning('Invalid authorization token');
-                ResponseHelper::sendResponse(401, ['error' => 'Invalid authorization token'], $requestId);
-                exit;
-            }
+            $tokenResult = TokenHelper::verifyToken($token);
+                if ($tokenResult === 'expired') {
+                    ResponseHelper::sendResponse(401, ['error' => 'Token has expired'], $requestId);
+                    exit;
+                }
+                
+                if ($tokenResult === 'invalid' || !$tokenResult) {
+                    ResponseHelper::sendResponse(401, ['error' => 'Invalid authorization token'], $requestId);
+                    exit;
+                }
 
             $employeeController = new EmployeeController($masterDb);
             $employeeController->handleGETRequest($endpoint, $requestId);
             break;
 
         default:
-            $requestLogger->warning('Method Not Allowed');
             ResponseHelper::sendResponse(405, ['error' => 'Method Not Allowed'], $requestId);
     }
 } catch (Exception $e) {

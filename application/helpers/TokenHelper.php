@@ -27,28 +27,22 @@ class TokenHelper {
         if (!self::$logger) {
             throw new \Exception('Logger is not initialized.');
         }
-
+    
         try {
             $publicKey = file_get_contents(self::$publicKeyPath);
             $decoded = JWT::decode($token, new Key($publicKey, 'RS256'));
             $user = (array) $decoded;
-
-            if (new DateTime() > new DateTime('@' . $user['exp'])) {
-                self::$logger->warning('Token has expired', ['token' => $token]);
-                ResponseHelper::sendResponse(401, ['error' => 'Token has expired']);
-                return false;
-            }
-
+    
             return $user;
         } catch (\Firebase\JWT\ExpiredException $e) {
-            self::$logger->warning('Token has expired', ['token' => $token, 'error' => $e->getMessage()]);
-            ResponseHelper::sendResponse(401, ['error' => 'Token has expired']);
-            return false;
+            //self::$logger->warning('Token has expired', ['token' => $token, 'error' => $e->getMessage()]);
+            return 'expired';
+
         } catch (\Exception $e) {
-            self::$logger->warning('Invalid token', ['token' => $token, 'error' => $e->getMessage()]);
-            ResponseHelper::sendResponse(401, ['error' => 'Invalid token: ' . $e->getMessage()]);
-            return false;
+            //self::$logger->warning('Invalid token', ['token' => $token, 'error' => $e->getMessage()]);
+            return 'invalid';
         }
     }
+    
 }
 ?>
