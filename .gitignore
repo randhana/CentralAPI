@@ -1,5 +1,5 @@
 /vendor
-/application/log
+/logs
 
 # Ignore private key
 /application/private.pem
