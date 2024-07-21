@@ -23,24 +23,39 @@ class TokenHelper {
         return null;
     }
 
-    public static function verifyToken($token) {
+    public static function verifyToken($apiDb, $token) {
         if (!self::$logger) {
             throw new \Exception('Logger is not initialized.');
         }
-    
         try {
+            //JWT Verification
             $publicKey = file_get_contents(self::$publicKeyPath);
             $decoded = JWT::decode($token, new Key($publicKey, 'RS256'));
             $user = (array) $decoded;
-    
+
+            //Database Lookup
+            $userModel = new User($apiDb);
+            $dbUser = $userModel->getUserByToken($token);
+
+            if (!$dbUser) {
+                return 'invalid';
+            }
+            // Check token expiry
+            if (new DateTime($dbUser['token_expiry']) < new DateTime()) {
+                return 'expired';
+            }
+
             return $user;
+
         } catch (\Firebase\JWT\ExpiredException $e) {
-            //self::$logger->warning('Token has expired', ['token' => $token, 'error' => $e->getMessage()]);
             return 'expired';
 
         } catch (\Exception $e) {
-            //self::$logger->warning('Invalid token', ['token' => $token, 'error' => $e->getMessage()]);
             return 'invalid';
+
+        } catch (PDOException $e) {
+            self::$logger->error('Token verification failed', ['error' => $e->getMessage()]);
+            ResponseHelper::sendResponse(500, ['error' => 'Token verification failed: ' ]);
         }
     }
     
