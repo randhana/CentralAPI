@@ -32,6 +32,26 @@ class User {
         }
     }
 
+    public function getUserByToken($token) {
+        $sql = "SELECT id, token_expiry FROM login WHERE token = ?";
+        $stmt = $this->apiDb->prepare($sql);
+        $stmt->bindParam(1, $token);
+        try {
+            if (!$stmt->execute()) {
+                throw new Exception('Query failed: ' . implode(' ', $stmt->errorInfo()));
+            }
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            self::$logger->error('Failed to get user by token', [
+                'token' => $token,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            throw $e; 
+        }
+    }
+
     public function updateToken($id, $token, $expiry) {
         $sql = "UPDATE login SET token = ?, token_expiry = ? WHERE id = ?";
         $stmt = $this->apiDb->prepare($sql);

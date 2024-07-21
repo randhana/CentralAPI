@@ -74,7 +74,8 @@ try {
                     exit;
                 }
 
-                $tokenResult = TokenHelper::verifyToken($token);
+                $tokenResult = TokenHelper::verifyToken($apiDb, $token);    
+
                 if ($tokenResult === 'expired') {
                     ResponseHelper::sendResponse(401, ['error' => 'Token has expired'], $requestId);
                     exit;
@@ -92,17 +93,17 @@ try {
 
         case 'GET':
             $token = TokenHelper::getBearerToken();
-            if (!$token) {
-                ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided'], $requestId);
-                exit;
-            }
+                if (!$token) {
+                    ResponseHelper::sendResponse(401, ['error' => 'Authorization token not provided'], $requestId);
+                    exit;
+                }
 
-            $tokenResult = TokenHelper::verifyToken($token);
+                $tokenResult = TokenHelper::verifyToken($apiDb, $token);
+
                 if ($tokenResult === 'expired') {
                     ResponseHelper::sendResponse(401, ['error' => 'Token has expired'], $requestId);
                     exit;
                 }
-                
                 if ($tokenResult === 'invalid' || !$tokenResult) {
                     ResponseHelper::sendResponse(401, ['error' => 'Invalid authorization token'], $requestId);
                     exit;
