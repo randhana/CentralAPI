@@ -32,10 +32,10 @@
 
 3. **Set up your environment:**
 
-    Rename the `.env.example` file to `.env` and fill in your database and other necessary configurations.
+    Create a file called `.env` and fill in your database and other necessary configurations.
 
     ```sh
-    cp .env.example .env
+    nano .env
     ```
 
 ---
