@@ -45,7 +45,7 @@ class AuthController {
         $payload = [
             'iat' => $issuedAt,
             'exp' => $expirationTime,
-            'iss' => 'https://asiaassetfinance.com/',
+            'iss' => 'https://website.com/',
             'data' => [
                 'userId' => $user['id'],
                 'username' => $username,
