@@ -25,6 +25,11 @@ class AuthController {
         }
 
         $postData = json_decode(file_get_contents('php://input'), true);
+        // Check if JSON is invalid
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            ResponseHelper::sendResponse(400, ['error' => 'Invalid JSON format'], $requestId);
+            return;
+        }
 
         if (!isset($postData['username']) || !isset($postData['password'])) {
             ResponseHelper::sendResponse(400, ['error' => 'Username and password are required'], $requestId);
