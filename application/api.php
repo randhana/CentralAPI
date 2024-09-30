@@ -86,7 +86,7 @@ try {
                     exit;
                 }
 
-                $employeeController = new EmployeeController($masterDb);
+                $employeeController = new EmployeeController($masterDb, $redis);
                 $employeeController->handlePOSTRequest($endpoint, $requestId);
             }
             break;
@@ -109,7 +109,7 @@ try {
                     exit;
                 }
 
-            $employeeController = new EmployeeController($masterDb);
+            $employeeController = new EmployeeController($masterDb, $redis);
             $employeeController->handleGETRequest($endpoint, $requestId);
             break;
 
