@@ -8,13 +8,15 @@ require_once('logger.php');
 
 class EmployeeController {
     private $employeeModel;
+    private $redis;
     private $requestLogger;
     private $errorLogger;
 
-    public function __construct($masterDb) {
+    public function __construct($masterDb, $redis) {
         $this->employeeModel = new Employee($masterDb);
+        $this->redis = $redis;
 
-        //init logger
+        // Initialize logger
         $loggers = initializeLoggers();
         $this->requestLogger = $loggers['requestLogger'];
         $this->errorLogger = $loggers['errorLogger'];
@@ -22,12 +24,13 @@ class EmployeeController {
 
     public function handleGETRequest($endpoint, $requestId) {
         $postData = json_decode(file_get_contents('php://input'), true);
+
         // Check if JSON is invalid
         if (json_last_error() !== JSON_ERROR_NONE) {
             ResponseHelper::sendResponse(400, ['error' => 'Invalid JSON format'], $requestId);
             return;
         }
-        
+
         $id = $postData['id'] ?? '';
         try {
             switch ($endpoint) {
@@ -37,18 +40,49 @@ class EmployeeController {
                 case 'getStatus':
                     if (empty($id)) {
                         ResponseHelper::sendResponse(400, ['error' => 'NIC is required for getStatus'], $requestId);
+                        return;
                     }
-                    $result = $this->employeeModel->getStatus($id);
+                    
+                    // Check Redis cache
+                    $cacheKey = "employee_status_" . $id;
+                    $cachedResult = $this->redis->get($cacheKey);
+
+                    if ($cachedResult) {
+                        $result = json_decode($cachedResult, true);
+                        
+                    } else {
+                        // If not cached, fetch from the database
+                        $result = $this->employeeModel->getStatus($id);
+                        if ($result) {
+                            // Cache the result for 30 minutes
+                            $this->redis->setex($cacheKey, 1800, json_encode($result));
+                        }
+                    }
                     break;
                 case 'getFullName':
                     if (empty($id)) {
                         ResponseHelper::sendResponse(400, ['error' => 'NIC is required for getFullName'], $requestId);
+                        return;
                     }
-                    $result = $this->employeeModel->getFullName($id);
+                    
+                    // Check Redis cache
+                    $cacheKey = "employee_fullname_" . $id;
+                    $cachedResult = $this->redis->get($cacheKey);
+
+                    if ($cachedResult) {
+                        $result = json_decode($cachedResult, true);
+                    } else {
+                        // If not cached, fetch from the database
+                        $result = $this->employeeModel->getFullName($id);
+                        if ($result) {
+                            // Cache the result for 30 minutes
+                            $this->redis->setex($cacheKey, 1800, json_encode($result));
+                        }
+                    }
                     break;
                 default:
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint'], $requestId);
-                    return; 
+                    return;
             }
 
             if (!$result) {
@@ -78,10 +112,10 @@ class EmployeeController {
                     break;
                 case 'uploadFile':
                     $this->uploadFile($requestId);
-                    return; 
+                    break;
                 default:
                     ResponseHelper::sendResponse(400, ['error' => 'Invalid Endpoint'], $requestId);
-                    return; 
+                    return;
             }
         } catch (Exception $e) {
             $this->errorLogger->error('Error handling POST request', [
@@ -121,6 +155,7 @@ class EmployeeController {
             ResponseHelper::sendResponse(400, ['error' => 'File not uploaded'], $requestId);
             return;
         }
+
         $file = $_FILES['file'];
 
         // Validate file type
@@ -131,7 +166,7 @@ class EmployeeController {
         }
 
         // Limit file size - max 5MB
-        $maxFileSize = 5 * 1024 * 1024; 
+        $maxFileSize = 5 * 1024 * 1024;
         if ($file['size'] > $maxFileSize) {
             ResponseHelper::sendResponse(400, ['error' => 'File size exceeds the limit of 5MB'], $requestId);
             return;
